@@ -27,6 +27,16 @@ go mod download
 go build .
 ```
 
+Run it via Docker.
+
+```
+docker run --restart=always -p 8080:8080 -v $(pwd):/app/data -e IP_DATA_URL="https://ipinfo.io/data/free/country.json.gz?token=your_actual_token" ashwanthkumar/ip-lookup:latest
+```
+
+1. Update `your_actual_token` with the actual token from the IP Info Dashboard.
+2. Feel free to change the port where the app runs as required.
+3. Make sure you mount a local folder into `/app/data` directory.
+
 ## Execution
 
 Update the `token` from your dashboard from https://ipinfo.io/account/data-downloads. We download and

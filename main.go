@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -19,7 +20,7 @@ import (
 )
 
 const (
-	dbFile = "ip_ranges.db"
+	dbFile = "data/ip_ranges.db"
 )
 
 var (
@@ -50,7 +51,11 @@ func init() {
 }
 
 func main() {
-	var err error
+	err := os.MkdirAll(filepath.Dir(dbFile), 0755)
+	if err != nil {
+		log.Fatalf("Failed to create data directory: %v", err)
+	}
+
 	db, err = sql.Open("sqlite3", dbFile)
 	if err != nil {
 		log.Fatal(err)
