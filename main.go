@@ -35,25 +35,29 @@ type IPRange struct {
 	CountryName   string `json:"country_name"`
 	Continent     string `json:"continent"`
 	ContinentName string `json:"continent_name"`
+	ASN           string `json:"asn"`
+	ASName        string `json:"as_name"`
+	ASDomain      string `json:"as_domain"`
 }
 
 type IPInfo struct {
 	IP            string `json:"ip"`
 	CountryName   string `json:"country_name"`
 	ContinentName string `json:"continent_name"`
-}
-
-func init() {
-	dataURL = os.Getenv("IP_DATA_URL")
-	if dataURL == "" {
-		log.Fatal("IP_DATA_URL environment variable is not set")
-	}
+	ASName        string `json:"as_name"`
+	ASDomain      string `json:"as_domain"`
 }
 
 func main() {
+	// Ensure the data directory exists
 	err := os.MkdirAll(filepath.Dir(dbFile), 0755)
 	if err != nil {
 		log.Fatalf("Failed to create data directory: %v", err)
+	}
+
+	dataURL = os.Getenv("IP_DATA_URL")
+	if dataURL == "" {
+		log.Fatal("IP_DATA_URL environment variable is not set")
 	}
 
 	db, err = sql.Open("sqlite3", dbFile)
@@ -101,6 +105,8 @@ func createTable() error {
 			end_ip BLOB,
 			country_name TEXT,
 			continent_name TEXT,
+			as_name TEXT,
+			as_domain TEXT,
 			is_ipv6 BOOLEAN
 		)
 	`)
@@ -197,8 +203,8 @@ func updateIPRanges() error {
 	}
 
 	stmt, err := tx.Prepare(`
-		INSERT INTO ip_ranges (start_ip, end_ip, country_name, continent_name, is_ipv6)
-		VALUES (?, ?, ?, ?, ?)
+		INSERT INTO ip_ranges (start_ip, end_ip, country_name, continent_name, as_name, as_domain, is_ipv6)
+		VALUES (?, ?, ?, ?, ?, ?, ?)
 	`)
 	if err != nil {
 		return fmt.Errorf("failed to prepare statement: %v", err)
@@ -229,7 +235,7 @@ func updateIPRanges() error {
 			endIPBytes = endIP.To4()
 		}
 
-		_, err = stmt.Exec(startIPBytes, endIPBytes, ipRange.CountryName, ipRange.ContinentName, isIPv6)
+		_, err = stmt.Exec(startIPBytes, endIPBytes, ipRange.CountryName, ipRange.ContinentName, ipRange.ASName, ipRange.ASDomain, isIPv6)
 		if err != nil {
 			return fmt.Errorf("failed to insert data: %v", err)
 		}
@@ -301,11 +307,11 @@ func lookupIP(ipStr string) (*IPInfo, error) {
 
 	var info IPInfo
 	err := db.QueryRow(`
-		SELECT ?, country_name, continent_name
+		SELECT ?, country_name, continent_name, as_name, as_domain
 		FROM ip_ranges
 		WHERE ? BETWEEN start_ip AND end_ip AND is_ipv6 = ?
 		LIMIT 1
-	`, ipStr, ipBytes, isIPv6).Scan(&info.IP, &info.CountryName, &info.ContinentName)
+	`, ipStr, ipBytes, isIPv6).Scan(&info.IP, &info.CountryName, &info.ContinentName, &info.ASName, &info.ASDomain)
 
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("IP not found in any range")
